@@ -1,0 +1,95 @@
+%{
+#include <iostream>
+#include <fstream>
+#include "language_parser.tab.h" // Include header-ul generat de bison
+extern int yylineno; // Variabila pentru numarul liniei
+%}
+%option noyywrap
+%option yylineno // Activeaza numararea automata a liniilor
+
+%%
+
+/***** Cerinta 1: Data Types, Classes *****/
+
+/* Tipuri de date predefinite (int, float, string, bool) */
+int|float|string|bool { return TYPE; }
+
+/* Cuvinte cheie pentru clase */
+class { return CLASS_KEYWORD; }
+new { return NEW_KEYWORD; }
+
+/* Literalii (Constante) */
+-?[1-9][0-9]*|0 { return INT_LITERAL; }
+-?([0-9]+\.[0-9]*|\.[0-9]+) { return FLOAT_LITERAL; } // Fara notatie exponentiala (e)
+true|false { return BOOL_LITERAL; }
+\"(\\.|[^\\"])*\" { return STRING_LITERAL; } // Constante string
+
+/* Identificatori (variabile, nume de clase, metode) */
+[a-zA-Z][_a-zA-Z0-9]* { return ID; }
+
+/***** Cerinta 2: Arithmetic and Boolean Expressions *****/
+
+/* Operatori Aritmetici */
+"+" { return ADD; }
+"-" { return SUB; }
+"*" { return MUL; }
+"/" { return DIV; }
+"%" { return MOD; }
+
+/* Operatori Relationali si Logici (Booleeni) */
+"==" { return EQ; }
+"!=" { return NEQ; }
+"<" { return LT; }
+">" { return GT; }
+"<=" { return LE; }
+">=" { return GE; }
+"&&" { return AND; }
+"||" { return OR; }
+"!" { return NOT; }
+
+/* Alti Simboli de Sintaxa */
+"=" { return ASSIGN; }
+"(" { return '('; }
+")" { return ')'; }
+"{" { return '{'; }
+"}" { return '}'; }
+";" { return ';'; }
+"." { return DOT; } /* Punctul pentru accesarea campurilor/metodelor */
+"," { return ','; }
+
+/* Spatii albe si Comentarii (Ignorate) */
+[ \t\r]+ ;
+\n { yylineno++; }
+"//".* ; // Comentariu de o singura linie
+"/*" { BEGIN comment; } // Comentariu pe bloc (C-style)
+<comment>"*/" { BEGIN 0; }
+<comment>.|\n ;
+
+/* Eroare Lexicala */
+. { std::cerr << "Lexical Error on line " << yylineno << ": Unrecognized token: " << yytext << std::endl; }
+
+%%
+
+// Functia main in C++
+int main(int argc, char** argv) {
+    if (argc > 1) {
+        // Citeste din fisierul dat ca argument
+        FILE *f = fopen(argv[1], "r");
+        if (f) {
+            yyin = f;
+        } else {
+            std::cerr << "Cannot open file: " << argv[1] << std::endl;
+            return 1;
+        }
+    } else {
+        // Citeste de la stdin daca nu este dat un fisier
+        yyin = stdin;
+    }
+    
+    std::cout << "Starting Parsing..." << std::endl;
+    // Apeaza functia de parsare generata de Bison
+    yyparse(); 
+    std::cout << "Parsing Complete." << std::endl;
+    
+    return 0;
+}
